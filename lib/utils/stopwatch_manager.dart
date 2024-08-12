@@ -1,16 +1,19 @@
 // ignore_for_file: depend_on_referenced_packages
 
 import 'dart:async';
+import 'package:clockwork/utils/app_state.dart';
 import 'package:flutter/foundation.dart';
-import 'package:uuid/uuid.dart';
 import 'package:clockwork/database/time_entry.dart';
 import 'package:clockwork/database/database_helper.dart';
+import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:developer' as developer;
 
 class StopwatchManager extends ChangeNotifier {
-  final DatabaseHelper _dbHelper = DatabaseHelper.instance;
-  final Uuid _uuid = const Uuid();
+  final DatabaseHelper dbHelper = DatabaseHelper.instance;
+
+  final AppState appState;
+  StopwatchManager(this.appState);
 
   final Stopwatch _stopwatch = Stopwatch();
   bool _isRunning = false;
@@ -58,25 +61,20 @@ class StopwatchManager extends ChangeNotifier {
 
     if (_startTime != null) {
       String jobName = _selectedJob ?? "Unknown";
-      TimeEntry entry = TimeEntry(_uuid.v4(), jobName, _startTime!, endTime);
-      await _dbHelper.insert(entry);
+      TimeEntry timeEntry =
+          TimeEntry(job: jobName, start: _startTime!, end: endTime);
+
+      await appState.addNewTimeEntry(timeEntry);
+
       developer.log('Stopwatch stopped and entry saved with job: $jobName',
           name: 'StopwatchManager');
-      await _dbHelper.printAllEntries(); // Print all entries after inserting
     }
 
     _stopwatch.reset();
     _startTime = null;
-    _selectedJob = null; // Reset selected job after stopping
+    _selectedJob = null;
     _saveRunningState();
     notifyListeners();
-  }
-
-  Future<List<TimeEntry>> getAllEntries() async {
-    List<TimeEntry> entries = await _dbHelper.queryAllEntries();
-    developer.log('Retrieved ${entries.length} entries',
-        name: 'StopwatchManager');
-    return entries;
   }
 
   void _startTimer() {
@@ -112,15 +110,5 @@ class StopwatchManager extends ChangeNotifier {
     final seconds = (elapsed.inSeconds % 60).toString().padLeft(2, '0');
 
     return "$hours:$minutes:$seconds";
-  }
-
-  Future<void> removeTimeEntry(String id) async {
-    await _dbHelper.delete(id);
-    notifyListeners();
-  }
-
-  Future<void> updateTimeEntry(TimeEntry entry) async {
-    await _dbHelper.update(entry);
-    notifyListeners();
   }
 }

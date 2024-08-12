@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:clockwork/app_state.dart';
+import 'package:clockwork/utils/app_state.dart';
 import 'package:clockwork/routes/routes.dart';
 import 'package:clockwork/pages/login_page.dart';
 
@@ -45,25 +45,6 @@ class CommonScaffold extends StatelessWidget {
           ? AppBar(
               title: const Text("ClockWork"),
               automaticallyImplyLeading: false,
-              actions: <Widget>[
-                PopupMenuButton(
-                  icon: const Icon(Icons.more_vert),
-                  onSelected: (String value) {
-                    if (value == 'share_csv') {
-                      appState.shareCsvFile();
-                    }
-                  },
-                  itemBuilder: (BuildContext context) => [
-                    const PopupMenuItem<String>(
-                      value: 'share_csv',
-                      child: ListTile(
-                        leading: Icon(Icons.share),
-                        title: Text("Share"),
-                      ),
-                    ),
-                  ],
-                )
-              ],
             )
           : null,
       body: body,

@@ -1,35 +1,51 @@
-import 'package:intl/intl.dart';
-
 class TimeEntry {
-  String id;
+  int? id;
   String job;
   DateTime start;
-  DateTime? end;
+  DateTime end;
+  bool needsSync;
+  bool isDeleted;
 
-  TimeEntry(this.id, this.job, this.start, this.end);
+  TimeEntry({
+    this.id,
+    required this.job,
+    required this.start,
+    required this.end,
+    this.needsSync = true,
+    this.isDeleted = false,
+  });
 
-  Duration get duration => end?.difference(start) ?? Duration.zero;
+  Duration get duration => end.difference(start);
 
-  Map<String, dynamic> toMap() {
-    return {
-      'id': id,
-      'job': job,
-      'start': start.toIso8601String(),
-      'end': end?.toIso8601String(),
-    };
-  }
-
-  factory TimeEntry.fromMap(Map<String, dynamic> map) {
+  factory TimeEntry.fromJson(Map<String, dynamic> json) {
     return TimeEntry(
-      map['id'],
-      map['job'],
-      DateTime.parse(map['start']),
-      map['end'] != null ? DateTime.parse(map['end']) : null,
+      id: json["id"] as int?,
+      job: json["job"] as String,
+      start: DateTime.parse(json["start"] as String),
+      end: DateTime.parse(json["end"] as String),
+      needsSync: json["needsSync"] == 1,
+      isDeleted: json["isDeleted"] == 1,
     );
   }
 
-  String get formattedStart => DateFormat('yyyy-MM-dd hh:mma').format(start);
-  String get formattedEnd =>
-      end != null ? DateFormat('yyyy-MM-dd hh:mma').format(end!) : 'N/A';
-  String get formattedDuration => duration.toString();
+  Map<String, dynamic> toJson() {
+    final map = {
+      "id": id,
+      "job": job,
+      "start": start.toIso8601String(),
+      "end": end.toIso8601String(),
+      "duration": duration.inSeconds.toString(),
+      "needsSync": needsSync ? 1 : 0,
+      "isDeleted": isDeleted ? 1 : 0,
+    };
+    if (id != null && id != -1) {
+      map["id"] = id;
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return "TimeEntry{id: $id, job: $job, start: $start, end: $end, duration: $duration, needsSync: $needsSync}\n";
+  }
 }

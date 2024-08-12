@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-import 'package:clockwork/app_state.dart';
+import 'package:clockwork/utils/app_state.dart';
 import 'package:clockwork/pages/login_page.dart';
 import 'package:clockwork/database/time_entry.dart';
-import 'package:clockwork/common_scaffold.dart';
+import 'package:clockwork/pages/common_scaffold.dart';
 
 class WorkLogPage extends StatefulWidget {
   const WorkLogPage({super.key});
@@ -36,10 +36,18 @@ class _WorkLogPageState extends State<WorkLogPage> {
       );
     }
 
+    @override
+    void initState() {
+      super.initState();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        Provider.of<AppState>(context, listen: false).syncDatabases();
+      });
+    }
+
     return CommonScaffold(
       currentIndex: 1,
       body: FutureBuilder<List<TimeEntry>>(
-        future: appState.stopwatchManager.getAllEntries(),
+        future: appState.dbHelper.retrieveLocal(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
@@ -49,21 +57,21 @@ class _WorkLogPageState extends State<WorkLogPage> {
             return const Center(child: Text('No entries found'));
           }
 
-          List<TimeEntry> timeEntries = snapshot.data!;
+          List<TimeEntry> timeEntries =
+              snapshot.data!.where((entry) => !entry.isDeleted).toList();
           return ListView.builder(
             itemCount: timeEntries.length,
             itemBuilder: (context, index) {
-              TimeEntry entry = timeEntries[index];
+              TimeEntry timeEntry = timeEntries[index];
               return Column(children: [
                 ListTile(
                   dense: true,
                   visualDensity: VisualDensity.compact,
                   title: () {
-                    if (entry.end != null &&
-                        DateFormat('yyyyMMdd').format(entry.start) !=
-                            DateFormat('yyyyMMdd').format(entry.end!)) {
+                    if (DateFormat('yyyyMMdd').format(timeEntry.start) !=
+                        DateFormat('yyyyMMdd').format(timeEntry.end)) {
                       return Text(
-                        "${DateFormat('MMMMd').format(entry.start)} - ${DateFormat('MMMMd').format(entry.end!)}",
+                        "${DateFormat('MMMMd').format(timeEntry.start)} - ${DateFormat('MMMMd').format(timeEntry.end)}",
                         style: const TextStyle(
                             fontSize: 15,
                             color: Color.fromARGB(255, 103, 63, 110),
@@ -71,7 +79,7 @@ class _WorkLogPageState extends State<WorkLogPage> {
                       );
                     } else {
                       return Text(
-                        DateFormat('MMMMd').format(entry.start),
+                        DateFormat('MMMMd').format(timeEntry.start),
                         style: const TextStyle(
                             fontSize: 15,
                             color: Color.fromARGB(255, 103, 63, 110),
@@ -85,7 +93,7 @@ class _WorkLogPageState extends State<WorkLogPage> {
                     child: IconButton(
                       icon: const Icon(Icons.delete),
                       onPressed: () {
-                        appState.removeTimeEntry(context, entry.id);
+                        // appState.dbHelper.markForDeletion(timeEntry.id ?? -1);
                       },
                     ),
                   ),
@@ -97,11 +105,11 @@ class _WorkLogPageState extends State<WorkLogPage> {
                     dense: true,
                     visualDensity: VisualDensity.compact,
                     title: Text(
-                      entry.job,
+                      timeEntry.job,
                       style: const TextStyle(fontSize: 15),
                     ),
                     onTap: () {
-                      appState.showJobDropdown(context, entry);
+                      appState.showJobDropdown(context, timeEntry);
                     },
                   ),
                 ),
@@ -112,11 +120,11 @@ class _WorkLogPageState extends State<WorkLogPage> {
                     leading: const Icon(Icons.play_arrow,
                         color: Color.fromARGB(255, 45, 178, 49)),
                     title: Text(
-                      "Start Time: ${DateFormat('hh:mma').format(entry.start)}",
+                      "Start Time: ${DateFormat('hh:mma').format(timeEntry.start)}",
                       style: const TextStyle(fontSize: 18),
                     ),
                     onTap: () {
-                      appState.updateTimeEntryTime(context, entry, true);
+                      appState.updateTimeEntryTime(context, timeEntry, true);
                     },
                   ),
                 ),
@@ -127,11 +135,11 @@ class _WorkLogPageState extends State<WorkLogPage> {
                     leading: const Icon(Icons.stop,
                         color: Color.fromARGB(255, 202, 26, 26)),
                     title: Text(
-                      "End Time:  ${entry.end != null ? DateFormat('hh:mma').format(entry.end!) : 'N/A'}",
+                      "End Time:  ${DateFormat('hh:mma').format(timeEntry.end)}",
                       style: const TextStyle(fontSize: 18),
                     ),
                     onTap: () {
-                      appState.updateTimeEntryTime(context, entry, false);
+                      appState.updateTimeEntryTime(context, timeEntry, false);
                     },
                   ),
                 ),

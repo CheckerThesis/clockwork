@@ -1,12 +1,13 @@
 // ignore_for_file: use_build_context_synchronously
 
 import 'dart:async';
+import 'package:clockwork/database/time_entry.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:clockwork/app_state.dart';
+import 'package:clockwork/utils/app_state.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:clockwork/pages/login_page.dart';
-import 'package:clockwork/common_scaffold.dart';
+import 'package:clockwork/pages/common_scaffold.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);
@@ -22,6 +23,9 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<AppState>(context, listen: false).syncDatabases();
+    });
     final appState = Provider.of<AppState>(context, listen: false);
     loadRunningStatus();
 
@@ -36,7 +40,7 @@ class _HomePageState extends State<HomePage> {
         t.cancel();
         return;
       }
-      setState(() {}); // Triggers a rebuild
+      setState(() {});
     });
   }
 
@@ -61,7 +65,7 @@ class _HomePageState extends State<HomePage> {
     List<BottomNavigationBarItem> bottomNavItems = [
       const BottomNavigationBarItem(
         icon: Icon(Icons.home),
-        label: "Home",
+        label: "HHome",
       ),
       const BottomNavigationBarItem(
         icon: Icon(Icons.list),
@@ -103,14 +107,13 @@ class _HomePageState extends State<HomePage> {
                 );
               }).toList(),
             ),
-            const SizedBox(height: 10),
-            // ElevatedButton(
-            //   onPressed: () async {
-            //     final dbHelper = DatabaseHelper.instance;
-            //     await dbHelper.printAllEntries();
-            //   },
-            //   child: const Text('Print Database Contents'),
-            // ),
+            MaterialButton(
+              onPressed: () {
+                appState.dbHelper.printAzure();
+                appState.dbHelper.printLocal();
+              },
+              child: Text("Print!"),
+            ),
           ],
         ),
       ),

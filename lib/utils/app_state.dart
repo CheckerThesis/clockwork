@@ -1,77 +1,66 @@
 // ignore_for_file: use_build_context_synchronously
 
 import 'package:flutter/material.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:csv/csv.dart';
-import 'package:share_plus/share_plus.dart';
-import 'dart:io';
 import 'package:clockwork/database/time_entry.dart';
-import 'stopwatch_manager.dart';
+import 'package:clockwork/utils/stopwatch_manager.dart';
 import 'package:clockwork/database/database_helper.dart';
 
 class AppState extends ChangeNotifier with WidgetsBindingObserver {
-  final StopwatchManager stopwatchManager = StopwatchManager();
+  late final StopwatchManager stopwatchManager;
   List<String> jobLabels = ["One", "Two", "Three"];
 
-  final DatabaseHelper _dbHelper = DatabaseHelper.instance;
+  final DatabaseHelper dbHelper = DatabaseHelper.instance;
 
   AppState() {
     WidgetsBinding.instance.addObserver(this);
+    stopwatchManager = StopwatchManager(this);
     stopwatchManager.addListener(_onStopwatchManagerChanged);
   }
 
-  void _onStopwatchManagerChanged() {
+  Future<void> syncDatabases() async {
+    await dbHelper.syncDatabases();
     notifyListeners();
   }
 
-  @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    stopwatchManager.removeListener(_onStopwatchManagerChanged);
-    super.dispose();
+  Future<void> addNewTimeEntry(TimeEntry timeEntry) async {
+    await dbHelper.writeLocal(timeEntry);
+    syncDatabases(); // Trigger sync after adding new entry
+    notifyListeners();
   }
 
-  Future<void> shareCsvFile() async {
-    List<TimeEntry> timeEntries = await stopwatchManager.getAllEntries();
-    List<List<String>> csvData = [
-      ['Job', 'Start timeDate', 'End timeDate', 'Duration'],
-      ...timeEntries.map((entry) => [
-            entry.job,
-            entry.formattedStart,
-            entry.formattedEnd,
-            entry.formattedDuration
-          ])
-    ];
-
-    String csv = const ListToCsvConverter().convert(csvData);
-    Directory directory = await getTemporaryDirectory();
-    String path = '${directory.path}/job.csv';
-    File file = File(path);
-    await file.writeAsString(csv);
-    XFile xfile = XFile(path);
-    await Share.shareXFiles([xfile], text: 'Check out this CSV file!');
-  }
-
-  void removeTimeEntry(BuildContext context, String id) async {
-    await stopwatchManager.removeTimeEntry(id);
+  void removeTimeEntry(BuildContext context, int id) async {
+    // await dbHelper.markForDeletion(id);
+    syncDatabases(); // Trigger sync after marking for deletion
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: const Text('Entry removed'),
+        content: const Text('Entry marked for deletion'),
         action: SnackBarAction(
           label: 'Undo',
           textColor: Colors.yellow,
-          onPressed: () {
-            _dbHelper.undoDelete();
+          onPressed: () async {
+            await dbHelper.updateLocal(TimeEntry(
+              id: id,
+              job:
+                  "Restored", // You might want to store the original job somewhere
+              start: DateTime
+                  .now(), // You might want to store the original start time
+              end: DateTime
+                  .now(), // You might want to store the original end time
+              needsSync: true,
+              isDeleted: false,
+            ));
+            syncDatabases(); // Trigger sync after undoing delete
+            notifyListeners();
           },
         ),
       ),
     );
+    notifyListeners();
   }
 
   Future<void> updateTimeEntryTime(
-      BuildContext context, TimeEntry entry, bool isStart) async {
-    DateTime initialDateTime =
-        isStart ? entry.start : (entry.end ?? DateTime.now());
+      BuildContext context, TimeEntry timeEntry, bool isStart) async {
+    DateTime initialDateTime = isStart ? timeEntry.start : (timeEntry.end);
 
     final TimeOfDay? pickedTime = await showTimePicker(
       context: context,
@@ -97,14 +86,28 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
         );
 
         if (isStart) {
-          entry.start = pickedDateTime;
+          timeEntry.start = pickedDateTime;
         } else {
-          entry.end = pickedDateTime;
+          timeEntry.end = pickedDateTime;
         }
 
-        await stopwatchManager.updateTimeEntry(entry);
+        timeEntry.needsSync = true;
+        await dbHelper.updateLocal(timeEntry);
+        await syncDatabases();
+        notifyListeners();
       }
     }
+  }
+
+  void _onStopwatchManagerChanged() {
+    notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    stopwatchManager.removeListener(_onStopwatchManagerChanged);
+    super.dispose();
   }
 
   void showJobDropdown(BuildContext context, TimeEntry entry) async {
@@ -118,8 +121,11 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
             onChanged: (String? newValue) async {
               if (newValue != null) {
                 entry.job = newValue;
-                await stopwatchManager.updateTimeEntry(entry);
+                entry.needsSync = true;
+                await dbHelper.updateLocal(entry);
+                syncDatabases();
                 Navigator.of(context).pop();
+                notifyListeners();
               }
             },
             items: jobLabels.map<DropdownMenuItem<String>>((String job) {

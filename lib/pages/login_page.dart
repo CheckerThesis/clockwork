@@ -123,27 +123,3 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 }
-
-  // updateLoginStatus() async {
-  //   SharedPreferences prefs = await SharedPreferences.getInstance();
-  //   setState(() {
-  //   });
-  // }
-
-  // Future<void> checkLoginStatus(BuildContext context) async {
-  //   SharedPreferences prefs = await SharedPreferences.getInstance();
-  //   bool isLoggedIn = prefs.getBool('isLoggedIn') ?? false;
-  //   if (isLoggedIn) {
-  //     int loginTimestamp = prefs.getInt('loginTimestamp') ?? 0;
-  //     int currentTime = DateTime.now().millisecondsSinceEpoch;
-  //     int sevenDaysInMilliseconds = 7 * 24 * 60 * 60 * 1000;
-  //     if (currentTime - loginTimestamp < sevenDaysInMilliseconds) {
-  //       if (context.mounted) {
-  //         Navigator.of(context).popAndPushNamed(RouteManager.homePage);
-  //       }
-  //     } else {
-  //       prefs.remove('isLoggedIn');
-  //       prefs.remove('loginTimestamp');
-  //     }
-  //   }
-  // }
