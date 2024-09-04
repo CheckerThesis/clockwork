@@ -1,7 +1,6 @@
 // ignore_for_file: use_build_context_synchronously
 
 import 'dart:async';
-import 'package:clockwork/database/time_entry.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:clockwork/utils/app_state.dart';
@@ -65,7 +64,7 @@ class _HomePageState extends State<HomePage> {
     List<BottomNavigationBarItem> bottomNavItems = [
       const BottomNavigationBarItem(
         icon: Icon(Icons.home),
-        label: "HHome",
+        label: "Home",
       ),
       const BottomNavigationBarItem(
         icon: Icon(Icons.list),
@@ -112,7 +111,7 @@ class _HomePageState extends State<HomePage> {
                 appState.dbHelper.printAzure();
                 appState.dbHelper.printLocal();
               },
-              child: Text("Print!"),
+              child: const Text("Print!"),
             ),
           ],
         ),

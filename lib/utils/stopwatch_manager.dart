@@ -7,7 +7,6 @@ import 'package:clockwork/database/time_entry.dart';
 import 'package:clockwork/database/database_helper.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:developer' as developer;
 
 class StopwatchManager extends ChangeNotifier {
   final DatabaseHelper dbHelper = DatabaseHelper.instance;
@@ -65,9 +64,6 @@ class StopwatchManager extends ChangeNotifier {
           TimeEntry(job: jobName, start: _startTime!, end: endTime);
 
       await appState.addNewTimeEntry(timeEntry);
-
-      developer.log('Stopwatch stopped and entry saved with job: $jobName',
-          name: 'StopwatchManager');
     }
 
     _stopwatch.reset();

@@ -9,6 +9,9 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
   late final StopwatchManager stopwatchManager;
   List<String> jobLabels = ["One", "Two", "Three"];
 
+  List<TimeEntry> _timeEntries = [];
+  List<TimeEntry> get timeEntries => _timeEntries;
+
   final DatabaseHelper dbHelper = DatabaseHelper.instance;
 
   AppState() {
@@ -19,18 +22,21 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
 
   Future<void> syncDatabases() async {
     await dbHelper.syncDatabases();
+    _timeEntries = await dbHelper.retrieveLocal();
     notifyListeners();
   }
 
   Future<void> addNewTimeEntry(TimeEntry timeEntry) async {
     await dbHelper.writeLocal(timeEntry);
+    _timeEntries.add(timeEntry);
     syncDatabases(); // Trigger sync after adding new entry
     notifyListeners();
   }
 
   void removeTimeEntry(BuildContext context, int id) async {
-    // await dbHelper.markForDeletion(id);
-    syncDatabases(); // Trigger sync after marking for deletion
+    await dbHelper.markForDeletion(id);
+    _timeEntries.removeWhere((entry) => entry.id == id);
+    syncDatabases();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: const Text('Entry marked for deletion'),
