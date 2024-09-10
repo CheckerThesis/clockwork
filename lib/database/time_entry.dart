@@ -46,6 +46,6 @@ class TimeEntry {
 
   @override
   String toString() {
-    return "TimeEntry{id: $id, job: $job, start: $start, end: $end, duration: $duration, needsSync: $needsSync\nisDeleted: $isDeleted}\n";
+    return "TimeEntry{id: $id, job: $job, start: $start, end: $end, duration: $duration, needsSync: $needsSync, isDeleted: $isDeleted}\n";
   }
 }

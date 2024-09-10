@@ -111,7 +111,7 @@ class _HomePageState extends State<HomePage> {
                 appState.dbHelper.printAzure();
                 appState.dbHelper.printLocal();
               },
-              child: const Text("Print!"),
+              child: const Text("Print!!"),
             ),
           ],
         ),

@@ -67,16 +67,31 @@ class DatabaseHelper {
       var localList = await retrieveLocal();
 
       for (var azureEntry in azureList) {
+        var localEntry =
+            localList.firstWhere((entry) => entry.id == azureEntry.id);
         if (!localList.any((localEntry) => localEntry.id == azureEntry.id)) {
           azureEntry.needsSync = false;
           await writeLocal(azureEntry, true);
           _logSuccess('syncDatabases',
               "Added entry from Azure to local database: ${azureEntry.id}");
+        } else if (azureEntry.job != localEntry.job ||
+            azureEntry.start != localEntry.start ||
+            azureEntry.end != localEntry.end ||
+            azureEntry.duration != localEntry.duration) {
+          print(azureEntry.id);
+          writeLocal(azureEntry, true);
         }
+
+        // check if current azureEntry and compare with localEntry
       }
 
       for (var localEntry in localList.reversed) {
-        if (localEntry.id! < 0) {
+        if (localEntry.isDeleted && localEntry.id! < 0) {
+          await deleteLocal(localEntry.id);
+        } else if (localEntry.isDeleted) {
+          await deleteAzure(localEntry.id);
+          await deleteLocal(localEntry.id);
+        } else if (localEntry.id! < 0) {
           int? azureId = await writeAzure(localEntry);
 
           TimeEntry newEntry = TimeEntry(
@@ -92,16 +107,15 @@ class DatabaseHelper {
           await deleteLocal(localEntry.id!);
           _logSuccess('syncDatabases',
               "Synced local entry to Azure and removed local copy: ${localEntry.id}");
-        } else if (localEntry.isDeleted) {
-          await deleteAzure(localEntry.id);
-          await deleteLocal(localEntry.id);
         } else if (!azureList
                 .any((azureEntry) => azureEntry.id == localEntry.id) &&
             localEntry.needsSync == false) {
           await deleteLocal(localEntry.id);
-        } else if (localEntry.needsSync = true &&
+        } else if (localEntry.needsSync == true &&
             azureList.any((azureEntry) => azureEntry.id == localEntry.id)) {
-          print(localEntry.id);
+          localEntry.needsSync = false;
+          writeLocal(localEntry, true);
+          writeAzure(localEntry);
         }
       }
       _logSuccess(
@@ -197,6 +211,11 @@ class DatabaseHelper {
         Map<String, dynamic> responseBody = jsonDecode(response.body);
         _logSuccess('writeAzure',
             "Entry written to Azure successfully with ID: ${responseBody['id']}");
+        return responseBody['id'];
+      } else if (response.statusCode == 200) {
+        Map<String, dynamic> responseBody = jsonDecode(response.body);
+        _logSuccess('writeAzure',
+            "Entry updated to Azure successfully with ID: ${responseBody['id']}");
         return responseBody['id'];
       }
       throw HttpException(
